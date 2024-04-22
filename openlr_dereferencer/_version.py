@@ -1,4 +1,4 @@
-"Package meta information"
+"""Package meta information"""
 __title__ = "openlr_dereferencer"
 __description__ = "OpenLR location dereferencer"
 __url__ = "https://github.com/tomtom-international/openlr-dereferencer-python"

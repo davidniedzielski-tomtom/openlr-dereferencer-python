@@ -2,11 +2,12 @@
 Provides the shortest_path(map, start, end) -> List[Line] function, which
 finds a shortest path between two nodes.
 """
-from typing import List, Optional, Callable, NamedTuple
-from heapq import heapify, heappush, heappop
 from functools import total_ordering
-from ..abstract import Node, Line
+from heapq import heapify, heappush, heappop
+from typing import List, Callable, NamedTuple, Optional
+
 from .tools import heuristic, LRPathNotFoundError, tautology
+from ..abstract import Node, Line, GeoTool
 
 
 class Score(NamedTuple):
@@ -14,13 +15,14 @@ class Score(NamedTuple):
     f: float
     g: float
 
+
 @total_ordering
 class PQItem(NamedTuple):
     """A single item in the search priority queue"""
     score: Score
     node: Node
-    line: Line
-    previous: "PQItem"
+    line: Optional[Line]
+    previous: Optional["PQItem"]
 
     def __lt__(self, other):
         return self.score < other.score
@@ -29,6 +31,7 @@ class PQItem(NamedTuple):
 def shortest_path(
         start: Node,
         end: Node,
+        geo_tool: GeoTool,
         linefilter: Callable[[Line], bool] = tautology,
         maxlen: float = float("inf"),
 ) -> List[Line]:
@@ -46,6 +49,8 @@ def shortest_path(
             The node from which the path shall start
         end:
             The destination node of the path
+        geo_tool:
+            Instance of GeoTool that understands the map's SRID
         linefilter:
             The optional function parameter `linefilter(Line) -> bool` allows you to decide
             whether a line is allowed to be part of the path. If the function returns `False`,
@@ -70,7 +75,7 @@ def shortest_path(
     """
 
     # The initial queue item
-    initial = PQItem(Score(heuristic(start, end), 0), start, None, None)
+    initial = PQItem(Score(heuristic(start, end, geo_tool), 0), start, None, None)
 
     # The queue
     open_set = [initial]
@@ -102,7 +107,7 @@ def shortest_path(
             continue
 
         # Add neighbors to the queue
-        for line in current_node.outgoing_lines():
+        for line in current_node.outgoing_lines(current.line):
             if not linefilter(line):
                 continue
 
@@ -112,7 +117,7 @@ def shortest_path(
                 continue
 
             neighbor_g_score = current.score.g + line.length
-            neighbor_f_score = neighbor_g_score + heuristic(neighbor_node, end)
+            neighbor_f_score = neighbor_g_score + heuristic(neighbor_node, end, geo_tool)
 
             if neighbor_f_score > maxlen:
                 continue

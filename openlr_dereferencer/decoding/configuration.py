@@ -1,4 +1,4 @@
-"Contains the configuration object that can be passed to the decoder, as well as default values"
+"""Contains the configuration object that can be passed to the decoder, as well as default values"""
 from io import TextIOBase
 from json import loads, dumps
 from typing import NamedTuple, List, Dict, Union, Optional

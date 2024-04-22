@@ -1,8 +1,10 @@
-"Contains a simple DecoderObserver implementation"
+"""Contains a simple DecoderObserver implementation"""
 from typing import Sequence, NamedTuple, Optional
+
 from openlr import LocationReferencePoint
-from ..decoding.candidate import Candidate
+
 from .abstract import DecoderObserver
+from ..decoding.candidate import Candidate
 from ..maps import Line
 
 
@@ -10,14 +12,15 @@ class AttemptedRoute(NamedTuple):
     """An attempted route between two lrps"""
     from_lrp: LocationReferencePoint
     to_lrp: LocationReferencePoint
-    from_line: Line
-    to_line: Line
+    from_candidate: Candidate
+    to_candidate: Candidate
     success: bool
     path: Optional[Sequence[Line]]
     reason: Optional[str]
 
+
 class AttemptedMatch(NamedTuple):
-    "An attempted try to resolve a pair of two LRPs"
+    """An attempted try to resolve a pair of two LRPs"""
     from_lrp: LocationReferencePoint
     to_lrp: LocationReferencePoint
     from_candidate: Sequence[Candidate]
@@ -47,15 +50,15 @@ class SimpleObserver(DecoderObserver):
         )
 
     def on_route_fail(self, from_lrp: LocationReferencePoint, to_lrp: LocationReferencePoint,
-                      from_line: Line, to_line: Line, reason: str):
+                      from_candidate: Candidate, to_candidate: Candidate, reason: str):
         self.attempted_routes.append(
-            AttemptedRoute(from_lrp, to_lrp, from_line, to_line, False, None, reason)
+            AttemptedRoute(from_lrp, to_lrp, from_candidate, to_candidate, False, None, reason)
         )
 
     def on_route_success(self, from_lrp: LocationReferencePoint, to_lrp: LocationReferencePoint,
-                         from_line: Line, to_line: Line, path: Sequence[Line]):
+                         from_candidate: Candidate, to_candidate: Candidate, path: Sequence[Line]):
         self.attempted_routes.append(
-            AttemptedRoute(from_lrp, to_lrp, from_line, to_line, True, path, None)
+            AttemptedRoute(from_lrp, to_lrp, from_candidate, to_candidate, True, path, None)
         )
 
     def on_matching_fail(self, from_lrp: LocationReferencePoint, to_lrp: LocationReferencePoint,
