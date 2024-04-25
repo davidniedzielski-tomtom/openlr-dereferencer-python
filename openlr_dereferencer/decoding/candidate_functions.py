@@ -138,7 +138,7 @@ def match_tail(current: LocationReferencePoint,
                observer: Optional[DecoderObserver],
                geo_tool: GeoTool,
                depth: int = 0,
-               cache: Dict[Tuple[Candidate,Candidate], Optional[Route]] = None
+               cache: Dict[Tuple[Candidate,Candidate], Optional[List[Route]]] = None
 ) -> List[Route]:
     """Searches for the rest of the line location.
 
@@ -172,7 +172,7 @@ def match_tail(current: LocationReferencePoint,
             If no candidate pair matches or a recursive call can not resolve a route.
     """
     if cache is None:
-        cache: Dict[Tuple[Candidate,Candidate], Optional[Route]] = {}
+        cache: Dict[Tuple[Candidate,Candidate], Optional[List[Route]]] = {}
 
     last_lrp = len(tail) == 1
     # The accepted distance to next point. This helps to save computations and filter bad paths
@@ -219,8 +219,9 @@ def match_tail(current: LocationReferencePoint,
         if last_lrp:
             return [route]
         try:
-            cache[(c_from,c_to)] = route
-            return [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool, depth+1, cache)
+            full_route = [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool, depth+1, cache)
+            cache[(c_from,c_to)] = full_route
+            return full_route
         except LRDecodeError:
             debug("Recursive call to resolve remaining path had no success")
             continue
