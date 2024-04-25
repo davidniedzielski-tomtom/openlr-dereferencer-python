@@ -172,6 +172,8 @@ def match_tail(current: LocationReferencePoint, candidates: List[Candidate], tai
 
     # Generate all pairs of candidates for the first two lrps
     next_lrp = tail[0]
+    debug("Attempting to find route between lrp %s and %s", current, next_lrp)
+    debug("Source lrp has %s candidates", len(candidates))
     next_candidates = list(nominate_candidates(next_lrp, reader, config, observer, last_lrp, geo_tool))
     if not next_candidates:
         if observer is not None:
@@ -182,6 +184,7 @@ def match_tail(current: LocationReferencePoint, candidates: List[Candidate], tai
     elif observer is not None:
         observer.on_candidates_found(next_lrp, next_candidates)
 
+    debug("Target lrp has %s candidates", len(next_candidates))
     pairs = list(product(candidates, next_candidates))
     # Sort by line scores
     pairs.sort(key=lambda pair: (pair[0].score + pair[1].score), reverse=True)
