@@ -2,7 +2,7 @@
 
 from itertools import product
 from logging import debug,error
-from typing import Optional, Iterable, List, Tuple
+from typing import Optional, Iterable, List, Tuple, Set, Dict, Hashable
 
 from openlr import FRC, LocationReferencePoint
 
@@ -130,9 +130,16 @@ def get_candidate_route(start: Candidate, dest: Candidate, lfrc: FRC, maxlen: fl
         return None
 
 
-def match_tail(current: LocationReferencePoint, candidates: List[Candidate], tail: List[LocationReferencePoint],
-               reader: MapReader, config: Config, observer: Optional[DecoderObserver], geo_tool: GeoTool, depth:int =0) -> List[
-    Route]:
+def match_tail(current: LocationReferencePoint,
+               candidates: List[Candidate],
+               tail: List[LocationReferencePoint],
+               reader: MapReader,
+               config: Config,
+               observer: Optional[DecoderObserver],
+               geo_tool: GeoTool,
+               depth: int = 0,
+               cache: Dict[Tuple[Candidate,Candidate], Optional[Route]] = None
+) -> List[Route]:
     """Searches for the rest of the line location.
 
     Every element of `candidates` is routed to every candidate for `tail[0]` (best scores first).
@@ -164,6 +171,9 @@ def match_tail(current: LocationReferencePoint, candidates: List[Candidate], tai
         LRDecodeError:
             If no candidate pair matches or a recursive call can not resolve a route.
     """
+    if cache is None:
+        cache: Dict[Tuple[Candidate,Candidate], Optional[Route]] = {}
+
     last_lrp = len(tail) == 1
     # The accepted distance to next point. This helps to save computations and filter bad paths
     minlen = (1 - config.max_dnp_deviation) * current.dnp - config.tolerated_dnp_dev
@@ -172,8 +182,11 @@ def match_tail(current: LocationReferencePoint, candidates: List[Candidate], tai
 
     # Generate all pairs of candidates for the first two lrps
     next_lrp = tail[0]
-    debug("Attempting to find route between lrps %s and %s", depth, depth+1)
-    debug("Source lrp has %s candidates", len(candidates))
+    debug("Attempting to find route between lrps %s and %s via line %s",
+          depth,
+          depth+1,
+          candidates[0].line.line_id)
+    debug("Source lrp (%s) has %s candidates", depth, len(candidates))
     next_candidates = list(nominate_candidates(next_lrp, reader, config, observer, last_lrp, geo_tool))
     if not next_candidates:
         if observer is not None:
@@ -184,19 +197,29 @@ def match_tail(current: LocationReferencePoint, candidates: List[Candidate], tai
     elif observer is not None:
         observer.on_candidates_found(next_lrp, next_candidates)
 
-    debug("Target lrp has %s candidates", len(next_candidates))
+    debug("Target lrp (%s) has %s candidates", depth+1, len(next_candidates))
     pairs = list(product(candidates, next_candidates))
     # Sort by line scores
     pairs.sort(key=lambda pair: (pair[0].score + pair[1].score), reverse=True)
 
     # For every pair of candidates, search for a path matching our requirements
     for (c_from, c_to) in pairs:
+        if (c_from, c_to) in cache:
+            v = cache[(c_from, c_to)]
+            if v is None:
+                debug("Cached route was None")
+                raise LRDecodeError("Decoding was unsuccessful: No candidates left or available.")
+            else:
+                debug("Returning cached route")
+                return [v]
         route = handleCandidatePair((current, next_lrp), (c_from, c_to), observer, lfrc, minlen, maxlen, geo_tool)
         if route is None:
+            cache[(c_from,c_to)] = None
             continue
         if last_lrp:
             return [route]
         try:
+            cache[(c_from,c_to)] = route
             return [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool, depth+1)
         except LRDecodeError:
             debug("Recursive call to resolve remaining path had no success")
