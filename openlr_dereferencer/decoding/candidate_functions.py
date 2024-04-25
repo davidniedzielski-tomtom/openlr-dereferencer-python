@@ -220,7 +220,7 @@ def match_tail(current: LocationReferencePoint,
             return [route]
         try:
             cache[(c_from,c_to)] = route
-            return [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool, depth+1)
+            return [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool, depth+1, cache)
         except LRDecodeError:
             debug("Recursive call to resolve remaining path had no success")
             continue
