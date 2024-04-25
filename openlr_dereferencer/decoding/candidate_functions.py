@@ -131,7 +131,7 @@ def get_candidate_route(start: Candidate, dest: Candidate, lfrc: FRC, maxlen: fl
 
 
 def match_tail(current: LocationReferencePoint, candidates: List[Candidate], tail: List[LocationReferencePoint],
-               reader: MapReader, config: Config, observer: Optional[DecoderObserver], geo_tool: GeoTool) -> List[
+               reader: MapReader, config: Config, observer: Optional[DecoderObserver], geo_tool: GeoTool, depth:int =0) -> List[
     Route]:
     """Searches for the rest of the line location.
 
@@ -172,7 +172,7 @@ def match_tail(current: LocationReferencePoint, candidates: List[Candidate], tai
 
     # Generate all pairs of candidates for the first two lrps
     next_lrp = tail[0]
-    debug("Attempting to find route between lrp %s and %s", current, next_lrp)
+    debug("Attempting to find route between lrps %s and %s", depth, depth+1)
     debug("Source lrp has %s candidates", len(candidates))
     next_candidates = list(nominate_candidates(next_lrp, reader, config, observer, last_lrp, geo_tool))
     if not next_candidates:
@@ -197,7 +197,7 @@ def match_tail(current: LocationReferencePoint, candidates: List[Candidate], tai
         if last_lrp:
             return [route]
         try:
-            return [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool)
+            return [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool, depth+1)
         except LRDecodeError:
             debug("Recursive call to resolve remaining path had no success")
             continue
