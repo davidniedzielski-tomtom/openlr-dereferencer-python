@@ -1,8 +1,8 @@
 """Contains functions for candidate searching and map matching"""
 
 from itertools import product
-from logging import debug,error
-from typing import Optional, Iterable, List, Tuple, Set, Dict, Hashable
+from logging import debug
+from typing import Optional, Iterable, List, Tuple, Dict
 
 from openlr import FRC, LocationReferencePoint
 
@@ -88,7 +88,7 @@ def make_candidates(lrp: LocationReferencePoint, line: Line, config: Config, obs
 def nominate_candidates(lrp: LocationReferencePoint, reader: MapReader, config: Config,
                         observer: Optional[DecoderObserver], is_last_lrp: bool, geo_tool: GeoTool) -> Iterable[
     Candidate]:
-    "Yields candidate lines for the LRP along with their score."
+    """Yields candidate lines for the LRP along with their score."""
     debug("Finding candidates for LRP %s at %s in radius %.02f", lrp, coords(lrp), config.search_radius)
     for line in reader.find_lines_close_to(coords(lrp), config.search_radius):
         yield from make_candidates(lrp, line, config, observer, is_last_lrp, geo_tool)
@@ -138,7 +138,7 @@ def match_tail(current: LocationReferencePoint,
                observer: Optional[DecoderObserver],
                geo_tool: GeoTool,
                depth: int = 0,
-               cache: Dict[Tuple[LocationReferencePoint,Candidate], Optional[List[Route]]] = {}
+               cache: Dict[Tuple[LocationReferencePoint,Candidate], Optional[List[Route]]] = None
 ) -> List[Route]:
     """Searches for the rest of the line location.
 
@@ -162,6 +162,11 @@ def match_tail(current: LocationReferencePoint,
             The optional decoder observer, which emits events and calls back.
         geo_tool:
             A reference to an instance of GeoTool that understands the map's CRS
+        depth: The recursion depth. Used for simply identifying the LRPs during debugging.
+        cache: A cache for storing the results of the recursive calls.  The cache is keyed
+            by the current LRP and the candidate for the current LRP. THe value is None if
+            a previous call to match_tail() failed to find a route, or else the complete
+            route from the current LRP to the end of the location reference.
 
     Returns:
         If any candidate pair matches, the function calls itself for the rest of `tail` and
@@ -171,6 +176,8 @@ def match_tail(current: LocationReferencePoint,
         LRDecodeError:
             If no candidate pair matches or a recursive call can not resolve a route.
     """
+    if cache is None:
+        cache: Dict[Tuple[LocationReferencePoint,Candidate], Optional[List[Route]]] = {}
     if len(candidates) == 1 and (current, candidates[0]) in cache:
         v = cache[(current, candidates[0])]
         if v is None:
@@ -206,16 +213,8 @@ def match_tail(current: LocationReferencePoint,
 
     # For every pair of candidates, search for a path matching our requirements
     for (c_from, c_to) in pairs:
-        # if (c_from, c_to) in cache:
-        #     v = cache[(c_from, c_to)]
-        #     if v is None:
-        #         raise LRDecodeError("Decoding was unsuccessful: No candidates left or available.")
-        #     else:
-        #         debug("Returning cached route")
-        #         return v
-        route = handleCandidatePair((current, next_lrp), (c_from, c_to), observer, lfrc, minlen, maxlen, geo_tool)
+        route = handle_candidate_pair((current, next_lrp), (c_from, c_to), observer, lfrc, minlen, maxlen, geo_tool)
         if route is None:
-            # cache[(c_from,c_to)] = None
             continue
         if last_lrp:
             return [route]
@@ -223,6 +222,8 @@ def match_tail(current: LocationReferencePoint,
             full_route = [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool, depth+1, cache)
             if len(candidates) == 1:
                 cache[(current,candidates[0])] = full_route
+            if observer is not None:
+                observer.on_location_end_reached(current, depth, c_from)
             return full_route
         except LRDecodeError:
             debug("Recursive call to resolve remaining path had no success")
@@ -235,9 +236,9 @@ def match_tail(current: LocationReferencePoint,
     raise LRDecodeError("Decoding was unsuccessful: No candidates left or available.")
 
 
-def handleCandidatePair(lrps: Tuple[LocationReferencePoint, LocationReferencePoint],
-                        candidates: Tuple[Candidate, Candidate], observer: Optional[DecoderObserver], lowest_frc: FRC,
-                        minlen: float, maxlen: float, geo_tool: GeoTool) -> Optional[Route]:
+def handle_candidate_pair(lrps: Tuple[LocationReferencePoint, LocationReferencePoint],
+                          candidates: Tuple[Candidate, Candidate], observer: Optional[DecoderObserver], lowest_frc: FRC,
+                          minlen: float, maxlen: float, geo_tool: GeoTool) -> Optional[Route]:
     """
     Try to find an adequate route between two LRP candidates.
 

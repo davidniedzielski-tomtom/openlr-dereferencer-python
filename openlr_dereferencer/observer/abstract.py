@@ -5,7 +5,7 @@ from typing import Sequence, List, Tuple
 from openlr import LocationReferencePoint
 
 from ..decoding.candidate import Candidate
-from ..decoding.routes import PointOnLine
+from ..decoding.routes import PointOnLine, Route
 from ..maps import Line
 
 
@@ -28,14 +28,14 @@ class DecoderObserver:
         """
 
     @abstractmethod
-    def on_candidate_score(lrp: LocationReferencePoint, candidate: PointOnLine, geo_score: float, fow_score: float,
+    def on_candidate_score(self, lrp: LocationReferencePoint, candidate: PointOnLine, geo_score: float, fow_score: float,
                            frc_score: float, bear_score: float, total_score: float):
         """
         Called by the decoder when a candidate for a location reference point is scored
         """
 
     @abstractmethod
-    def on_candidate_rejected_frc(lrp: LocationReferencePoint, candidate: Candidate, tolerated_frc: int):
+    def on_candidate_rejected_frc(self, lrp: LocationReferencePoint, candidate: Candidate, tolerated_frc: int):
         """
         Called by the decoder when a candidate for a location reference point is rejected due to incompatible FRC
         """
@@ -49,20 +49,25 @@ class DecoderObserver:
         """Called by the decoder when it finds no candidates for a location reference point"""
 
     @abstractmethod
-    def on_route_fail_length(self, lrps: Tuple[LocationReferencePoint, LocationReferencePoint],
-                             candidates: Tuple[Candidate, Candidate], route: List[Candidate], actual_length,
+    def on_route_fail_length(self, from_lrp: LocationReferencePoint, to_lrp: LocationReferencePoint,
+                             from_candidate: Candidate, to_candidate: Candidate, route: Route, actual_length,
                              min_length: float, max_len_float):
         """Called by the decoder when it finds no candidates for a location reference point"""
 
     @abstractmethod
     def on_route_success(self, from_lrp: LocationReferencePoint, to_lrp: LocationReferencePoint,
-                         from_line: Line, to_line: Line, path: Sequence[Line]):
+                         from_candidate: Candidate, to_candidate: Candidate, path: Sequence[Line]):
         """Called after the decoder successfully finds a route between two candidate
         lines for successive location reference points"""
 
     @abstractmethod
+    def on_location_end_reached(self, from_lrp: LocationReferencePoint, from_index: int,
+                                from_candidate: Candidate):
+        """Called when a route is found from an LRP to the end of the location"""
+
+    @abstractmethod
     def on_route_fail(self, from_lrp: LocationReferencePoint, to_lrp: LocationReferencePoint,
-                      from_line: Line, to_line: Line, reason: str):
+                      from_candidate: Candidate, to_candidate: Candidate, reason: str):
         """Called after the decoder fails to find a route between two candidate
         lines for successive location reference points"""
 
