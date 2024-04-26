@@ -171,7 +171,7 @@ def match_tail(current: LocationReferencePoint,
         LRDecodeError:
             If no candidate pair matches or a recursive call can not resolve a route.
     """
-    if len(candidates) == 1 and (depth, candidates[0]) in cache:
+    if len(candidates) == 1 and (current, candidates[0]) in cache:
         v = cache[(current, candidates[0])]
         if v is None:
             raise LRDecodeError("Decoding was unsuccessful: No candidates left or available.")
@@ -206,16 +206,16 @@ def match_tail(current: LocationReferencePoint,
 
     # For every pair of candidates, search for a path matching our requirements
     for (c_from, c_to) in pairs:
-        if (c_from, c_to) in cache:
-            v = cache[(c_from, c_to)]
-            if v is None:
-                raise LRDecodeError("Decoding was unsuccessful: No candidates left or available.")
-            else:
-                debug("Returning cached route")
-                return v
+        # if (c_from, c_to) in cache:
+        #     v = cache[(c_from, c_to)]
+        #     if v is None:
+        #         raise LRDecodeError("Decoding was unsuccessful: No candidates left or available.")
+        #     else:
+        #         debug("Returning cached route")
+        #         return v
         route = handleCandidatePair((current, next_lrp), (c_from, c_to), observer, lfrc, minlen, maxlen, geo_tool)
         if route is None:
-            cache[(c_from,c_to)] = None
+            # cache[(c_from,c_to)] = None
             continue
         if last_lrp:
             return [route]
