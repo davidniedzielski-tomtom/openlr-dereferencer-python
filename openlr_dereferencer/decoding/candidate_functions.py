@@ -138,7 +138,7 @@ def match_tail(current: LocationReferencePoint,
                observer: Optional[DecoderObserver],
                geo_tool: GeoTool,
                depth: int = 0,
-               cache: Dict[Tuple[int,Candidate], Optional[List[Route]]] = None
+               cache: Dict[Tuple[LocationReferencePoint,Candidate], Optional[List[Route]]] = {}
 ) -> List[Route]:
     """Searches for the rest of the line location.
 
@@ -171,15 +171,11 @@ def match_tail(current: LocationReferencePoint,
         LRDecodeError:
             If no candidate pair matches or a recursive call can not resolve a route.
     """
-    if cache is None:
-        cache: Dict[Tuple[int,Candidate], Optional[List[Route]]] = {}
-    elif len(candidates) == 1 and (depth, candidates[0]) in cache:
-        v = cache[(depth, candidates[0])]
+    if len(candidates) == 1 and (depth, candidates[0]) in cache:
+        v = cache[(current, candidates[0])]
         if v is None:
-            debug("Cached route was None")
             raise LRDecodeError("Decoding was unsuccessful: No candidates left or available.")
         else:
-            debug("Returning cached route")
             return v
 
     last_lrp = len(tail) == 1
@@ -194,7 +190,6 @@ def match_tail(current: LocationReferencePoint,
           depth,
           depth+1,
           candidates[0].line.line_id)
-    debug("Source lrp (%s) has %s candidates", depth, len(candidates))
     next_candidates = list(nominate_candidates(next_lrp, reader, config, observer, last_lrp, geo_tool))
     if not next_candidates:
         if observer is not None:
@@ -205,7 +200,6 @@ def match_tail(current: LocationReferencePoint,
     elif observer is not None:
         observer.on_candidates_found(next_lrp, next_candidates)
 
-    debug("Target lrp (%s) has %s candidates", depth+1, len(next_candidates))
     pairs = list(product(candidates, next_candidates))
     # Sort by line scores
     pairs.sort(key=lambda pair: (pair[0].score + pair[1].score), reverse=True)
@@ -215,11 +209,10 @@ def match_tail(current: LocationReferencePoint,
         if (c_from, c_to) in cache:
             v = cache[(c_from, c_to)]
             if v is None:
-                debug("Cached route was None")
                 raise LRDecodeError("Decoding was unsuccessful: No candidates left or available.")
             else:
                 debug("Returning cached route")
-                return [v]
+                return v
         route = handleCandidatePair((current, next_lrp), (c_from, c_to), observer, lfrc, minlen, maxlen, geo_tool)
         if route is None:
             cache[(c_from,c_to)] = None
@@ -229,7 +222,7 @@ def match_tail(current: LocationReferencePoint,
         try:
             full_route = [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool, depth+1, cache)
             if len(candidates) == 1:
-                cache[(depth,candidates[0])] = full_route
+                cache[(current,candidates[0])] = full_route
             return full_route
         except LRDecodeError:
             debug("Recursive call to resolve remaining path had no success")
@@ -238,7 +231,7 @@ def match_tail(current: LocationReferencePoint,
     if observer is not None:
         observer.on_matching_fail(current, next_lrp, candidates, next_candidates, "No candidate pair matches")
     if len(candidates) == 1:
-        cache[(depth, candidates[0])] = None
+        cache[(current, candidates[0])] = None
     raise LRDecodeError("Decoding was unsuccessful: No candidates left or available.")
 
 
