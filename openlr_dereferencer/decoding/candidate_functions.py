@@ -225,7 +225,7 @@ def match_tail(current: LocationReferencePoint,
             if len(candidates) == 1:
                 cache[(current,candidates[0])] = full_route
             if observer is not None:
-                observer.on_location_end_reached(current, depth, c_from, c_to)
+                observer.on_location_end_reached(current, depth, c_from, next_lrp, c_to)
             return full_route
         except LRDecodeError:
             debug("Recursive call to resolve remaining path had no success")
