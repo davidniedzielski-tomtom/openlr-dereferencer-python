@@ -62,7 +62,7 @@ class DecoderObserver:
 
     @abstractmethod
     def on_location_end_reached(self, from_lrp: LocationReferencePoint, from_index: int,
-                                from_candidate: Candidate):
+                                from_candidate: Candidate, to_candidate: Candidate):
         """Called when a route is found from an LRP to the end of the location"""
 
     @abstractmethod
