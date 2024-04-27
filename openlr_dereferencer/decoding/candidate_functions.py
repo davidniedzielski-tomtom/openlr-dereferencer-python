@@ -218,7 +218,7 @@ def match_tail(current: LocationReferencePoint,
             continue
         if last_lrp:
             if observer is not None:
-                observer.on_location_end_reached(current, depth, c_from, c_to)
+                observer.on_location_end_reached(current, depth, c_from, next_lrp, c_to)
             return [route]
         try:
             full_route = [route] + match_tail(next_lrp, [c_to], tail[1:], reader, config, observer, geo_tool, depth+1, cache)
