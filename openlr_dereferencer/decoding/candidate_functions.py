@@ -54,6 +54,7 @@ def make_candidates(lrp: LocationReferencePoint, line: Line, config: Config, obs
     # Drop candidate if there is no partial line left
     if is_last_lrp and reloff <= 0.0 or not is_last_lrp and reloff >= 1.0:
         return
+
     candidate = Candidate(line, reloff)
     bearing = compute_bearing(candidate, is_last_lrp, config.bear_dist, geo_tool)
     bear_diff = angle_difference(bearing, lrp.bear)
@@ -69,10 +70,8 @@ def make_candidates(lrp: LocationReferencePoint, line: Line, config: Config, obs
               bear_diff, bearing, lrp.bear)
         if observer is not None:
             observer.on_candidate_rejected_bearing(lrp, candidate, bearing, bear_diff, config.max_bear_deviation)
-
-        debug(f"Not considering %s because the bearing difference is %s ° (bear: %s. lrp bear: %s)", candidate,
-              bear_diff, bearing, lrp.bear)
         return
+
     candidate.score = score_lrp_candidate(lrp, candidate, config, is_last_lrp, observer, geo_tool)
     if candidate.score < config.min_score:
         if observer is not None:
@@ -80,6 +79,7 @@ def make_candidates(lrp: LocationReferencePoint, line: Line, config: Config, obs
                                            f"Candidate score = {candidate.score} lower than min. score = {config.min_score}", )
         debug(f"Not considering {candidate}: candidate score = {candidate.score} < min. score = {config.min_score}")
         return
+
     if observer is not None:
         observer.on_candidate_found(lrp, candidate, )
     yield candidate
